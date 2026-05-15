@@ -1,0 +1,136 @@
+The Investment Banking Portal frontend is developed using Angular 17 with Angular Material. It is a single-page application (SPA) that interacts with a Spring Boot backend via RESTful APIs, secured with JWT authentication.
+
+Key Features:
+
+User Authentication (Login / Logout)
+
+Role-based access (User / Admin)
+
+CRUD operations for deals
+
+Notes management for deals
+
+User management for Admins
+
+Search and filter functionality
+
+Reusable dialogs, loading spinners, and empty states
+
+Responsive UI using Angular Material
+
+Real-time state management using RxJS BehaviorSubject
+
+2️⃣ Technologies Used
+Layer	Technology
+Framework	Angular 17
+UI Library	Angular Material
+State Management	RxJS (BehaviorSubject)
+HTTP	HttpClientModule
+Forms	Reactive Forms
+Routing	Angular Router
+Styling	CSS / Angular Material Themes
+Interceptors	JWT Interceptor
+Backend Communication	REST API
+
+
+Key Modules & Components
+🔹 Auth Module
+
+LoginComponent
+
+Reactive login form
+
+Validation & error handling
+
+JWT stored in localStorage
+
+Redirect to /deals after login
+
+🔹 Deals Module
+
+DealListComponent
+
+List all deals
+
+Search & filter functionality
+
+Uses dealTypeDisplay and stageDisplay pipes
+
+DealFormComponent
+
+Create / Edit deals
+
+Validates required fields
+
+DealDetailsComponent
+
+View deal details
+
+Add notes using AddNoteDialogComponent
+
+Update deal stage & value
+
+🔹 Admin Module
+
+UserManagementComponent
+
+CRUD users (Admin only)
+
+Activate / deactivate users
+
+Form validation & table listing
+
+Role-based access using RoleGuard
+
+🔹 Shared Module
+
+Components
+
+LoadingSpinnerComponent
+
+EmptyStateComponent
+
+ConfirmDialogComponent
+
+Directives
+
+RoleDirective
+
+PermissionDirective
+
+Pipes
+
+DealTypeDisplayPipe
+
+StageDisplayPipe
+
+RoleDisplayPipe
+
+🔹 Services
+Service	Purpose
+AuthService	Login, logout, JWT, current user state
+DealService	CRUD operations for deals & notes
+UserService	Admin user management
+DialogService	Confirm dialogs & warning/info dialogs
+NotificationService	Snackbar notifications
+🔹 Interceptors & Guards
+
+AuthInterceptor: Attach JWT to every request
+
+AuthGuard: Protect routes requiring login
+
+RoleGuard: Protect admin routes
+
+5️⃣ Component Interaction Flow
+
+User logs in
+
+JWT token stored → AuthService BehaviorSubject updated
+
+Navbar displays user info
+
+Routes protected via AuthGuard / RoleGuard
+
+API calls via HttpClient
+
+Responses processed and displayed via components

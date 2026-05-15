@@ -1,0 +1,83 @@
+package com.example.demo.service;
+
+
+
+import com.dealportal.dto.CreateUserDTO;
+import com.dealportal.dto.UserDTO;
+import com.dealportal.entity.User;
+import com.dealportal.exception.ResourceNotFoundException;
+import com.dealportal.repository.UserRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.stream.Collectors;
+
+@Service
+@RequiredArgsConstructor
+public class UserService implements UserDetailsService {
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
+    
+    @Override
+    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+        return userRepository.findByUsername(username)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found: " + username));
+    }
+    
+    public UserDTO getCurrentUser() {
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        return convertToDTO(user);
+    }
+    
+    public UserDTO createUser(CreateUserDTO createUserDTO) {
+        if (userRepository.existsByUsername(createUserDTO.getUsername())) {
+            throw new IllegalArgumentException("Username already exists");
+        }
+        if (userRepository.existsByEmail(createUserDTO.getEmail())) {
+            throw new IllegalArgumentException("Email already exists");
+        }
+        
+        User user = new User();
+        user.setUsername(createUserDTO.getUsername());
+        user.setEmail(createUserDTO.getEmail());
+        user.setPassword(passwordEncoder.encode(createUserDTO.getPassword()));
+        user.setRole(createUserDTO.getRole());
+        user.setActive(true);
+        
+        User savedUser = userRepository.save(user);
+        return convertToDTO(savedUser);
+    }
+    
+    public List<UserDTO> getAllUsers() {
+        return userRepository.findAll().stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
+    
+    public UserDTO updateUserStatus(Long userId, Boolean active) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        user.setActive(active);
+        User updatedUser = userRepository.save(user);
+        return convertToDTO(updatedUser);
+    }
+    
+    private UserDTO convertToDTO(User user) {
+        return new UserDTO(
+            user.getId(),
+            user.getUsername(),
+            user.getEmail(),
+            user.getRole(),
+            user.getActive(),
+            user.getCreatedAt()
+        );
+    }
+}

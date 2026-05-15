@@ -1,0 +1,25 @@
+package com.example.demo.controller;
+
+
+
+import com.dealportal.dto.AuthDTO;
+import com.dealportal.dto.TokenDTO;
+import com.dealportal.service.AuthService;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping("/api/auth")
+@RequiredArgsConstructor
+@CrossOrigin
+public class AuthController {
+    private final AuthService authService;
+    
+    @PostMapping("/login")
+    public ResponseEntity<TokenDTO> login(@Valid @RequestBody AuthDTO authDTO) {
+        TokenDTO tokenDTO = authService.authenticate(authDTO);
+        return ResponseEntity.ok(tokenDTO);
+    }
+}

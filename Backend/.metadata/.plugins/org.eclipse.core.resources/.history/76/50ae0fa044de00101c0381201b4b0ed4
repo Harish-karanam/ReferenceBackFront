@@ -1,0 +1,126 @@
+package com.example.demo;
+
+import com.example.demo.Enums.DealStage;
+import com.example.demo.Enums.DealType;
+import com.example.demo.Enums.Role;
+import com.example.demo.SecurityConfigurations.DataInitializer;
+import com.example.demo.entity.Deal;
+import com.example.demo.entity.Note;
+import com.example.demo.entity.User;
+import com.example.demo.repository.DealRepository;
+import com.example.demo.repository.UserRepository;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+import org.springframework.security.crypto.password.PasswordEncoder;
+
+import java.time.LocalDateTime;
+import java.util.Arrays;
+import java.util.Optional;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
+class DataInitializerTest {
+
+    @Mock
+    private UserRepository userRepository;
+
+    @Mock
+    private DealRepository dealRepository;
+
+    @Mock
+    private PasswordEncoder passwordEncoder;
+
+    @InjectMocks
+    private DataInitializer dataInitializer;
+
+    @BeforeEach
+    void setUp() {
+        MockitoAnnotations.openMocks(this);
+    }
+
+    // ------------------- Test createUsers -------------------
+
+    @Test
+    void testCreateUsers_savesAllUsersCorrectly() {
+        when(userRepository.existsByUsername(anyString())).thenReturn(false);
+        when(passwordEncoder.encode(anyString())).thenReturn("encoded");
+
+        // Call package-private createUsers() directly
+        dataInitializer.createUsers();
+
+        // Capture saved users
+        ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
+        verify(userRepository, atLeast(5)).save(userCaptor.capture());
+
+        assertEquals(5, userCaptor.getAllValues().size());
+
+        // Check roles and active status
+        User admin = userCaptor.getAllValues().stream().filter(u -> u.getUsername().equals("admin")).findFirst().orElse(null);
+        assertNotNull(admin);
+        assertEquals(Role.ADMIN, admin.getRole());
+        assertTrue(admin.isActive());
+
+        User sarah = userCaptor.getAllValues().stream().filter(u -> u.getUsername().equals("sarah.jones")).findFirst().orElse(null);
+        assertNotNull(sarah);
+        assertEquals(Role.USER, sarah.getRole());
+        assertFalse(sarah.isActive());
+    }
+
+    // ------------------- Test addSampleNotes -------------------
+
+    @Test
+    void testAddSampleNotes_addsNotesAndSavesDeal() {
+        User user1 = new User();
+        user1.setUsername("user1");
+        User user2 = new User();
+        user2.setUsername("user2");
+
+        Deal deal = new Deal();
+
+        // Call package-private addSampleNotes()
+        dataInitializer.addSampleNotes(deal, user1, user2);
+
+        assertNotNull(deal.getNotes());
+        assertEquals(3, deal.getNotes().size());
+        assertEquals("Initial contact made with client. Positive response received.", deal.getNotes().get(0).getNote());
+
+        // Verify save is called
+        verify(dealRepository, times(1)).save(deal);
+    }
+
+    // ------------------- Test run() -------------------
+
+    @Test
+    void testRun_createsUsersAndDeals() throws Exception {
+        // Mock user existence
+        when(userRepository.existsByUsername(anyString())).thenReturn(false);
+        when(passwordEncoder.encode(anyString())).thenReturn("encoded");
+
+        // Mock findByUsername to return dummy users for deals
+        User admin = new User(); admin.setUsername("admin");
+        User john = new User(); john.setUsername("john.doe");
+        User jane = new User(); jane.setUsername("jane.smith");
+        User bob = new User(); bob.setUsername("bob.wilson");
+
+        when(userRepository.findByUsername("admin")).thenReturn(Optional.of(admin));
+        when(userRepository.findByUsername("john.doe")).thenReturn(Optional.of(john));
+        when(userRepository.findByUsername("jane.smith")).thenReturn(Optional.of(jane));
+        when(userRepository.findByUsername("bob.wilson")).thenReturn(Optional.of(bob));
+
+        when(dealRepository.count()).thenReturn(0L);
+
+        // Call run()
+        dataInitializer.run();
+
+        // Verify users saved
+        verify(userRepository, atLeast(5)).save(any(User.class));
+
+        // Verify deals saved
+        verify(dealRepository, atLeast(1)).saveAll(anyList());
+    }
+}

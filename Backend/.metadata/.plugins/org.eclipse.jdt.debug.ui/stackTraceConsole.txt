@@ -1,0 +1,5 @@
+java.lang.NullPointerException: Cannot invoke "com.example.demo.entity.User.getId()" because the return value of "com.example.demo.entity.Deal.getCreatedBy()" is null
+	at com.example.demo.service.DealService.convertToDTO(DealService.java:131)
+	at com.example.demo.service.DealService.updateDeal(DealService.java:83)
+	at com.example.demo.DealServiceTest.testUpdateDeal_Success(DealServiceTest.java:112)
+

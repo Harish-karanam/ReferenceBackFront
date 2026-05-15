@@ -1,0 +1,146 @@
+package com.example.demo;
+
+import com.example.demo.Enums.DealStage;
+import com.example.demo.Enums.DealType;
+import com.example.demo.Enums.Role;
+import com.example.demo.SecurityConfigurations.DataInitializer;
+import com.example.demo.entity.Deal;
+import com.example.demo.entity.Note;
+import com.example.demo.entity.User;
+import com.example.demo.repository.DealRepository;
+import com.example.demo.repository.UserRepository;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+import org.springframework.security.crypto.password.PasswordEncoder;
+
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Optional;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
+class DataInitializerTest {
+
+    @Mock
+    private UserRepository userRepository;
+
+    @Mock
+    private DealRepository dealRepository;
+
+    @Mock
+    private PasswordEncoder passwordEncoder;
+
+    @InjectMocks
+    private DataInitializer dataInitializer;
+
+    private User admin, john, jane, bob, sarah;
+
+    @BeforeEach
+    void setUp() {
+        MockitoAnnotations.openMocks(this);
+
+        // Setup dummy users for deal assignments
+        admin = new User(); admin.setUsername("admin");
+        john = new User(); john.setUsername("john.doe");
+        jane = new User(); jane.setUsername("jane.smith");
+        bob = new User(); bob.setUsername("bob.wilson");
+        sarah = new User(); sarah.setUsername("sarah.jones");
+
+        when(userRepository.findByUsername("admin")).thenReturn(Optional.of(admin));
+        when(userRepository.findByUsername("john.doe")).thenReturn(Optional.of(john));
+        when(userRepository.findByUsername("jane.smith")).thenReturn(Optional.of(jane));
+        when(userRepository.findByUsername("bob.wilson")).thenReturn(Optional.of(bob));
+        when(userRepository.findByUsername("sarah.jones")).thenReturn(Optional.of(sarah));
+
+        when(passwordEncoder.encode(anyString())).thenReturn("encoded");
+    }
+
+    // ------------------- Test createUsers -------------------
+
+    @Test
+    void testCreateUsers_savesAllUsersCorrectly() {
+        when(userRepository.existsByUsername(anyString())).thenReturn(false);
+
+        dataInitializer.createUsers();
+
+        ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
+        verify(userRepository, atLeast(5)).save(captor.capture());
+
+        List<User> savedUsers = captor.getAllValues();
+        assertEquals(5, savedUsers.size());
+
+        User adminUser = savedUsers.stream().filter(u -> u.getUsername().equals("admin")).findFirst().orElse(null);
+        assertNotNull(adminUser);
+        assertEquals(Role.ADMIN, adminUser.getRole());
+        assertTrue(adminUser.isActive());
+
+        User inactiveUser = savedUsers.stream().filter(u -> u.getUsername().equals("sarah.jones")).findFirst().orElse(null);
+        assertNotNull(inactiveUser);
+        assertFalse(inactiveUser.isActive());
+    }
+
+    // ------------------- Test addSampleNotes -------------------
+
+    @Test
+    void testAddSampleNotes_addsNotesAndSavesDeal() {
+        Deal deal = new Deal();
+        dataInitializer.addSampleNotes(deal, admin, john);
+
+        List<Note> notes = deal.getNotes();
+        assertNotNull(notes);
+        assertEquals(3, notes.size());
+        assertEquals(admin, notes.get(0).getUser());
+        assertEquals(john, notes.get(1).getUser());
+        assertEquals(admin, notes.get(2).getUser());
+
+        verify(dealRepository, times(1)).save(deal);
+    }
+
+    // ------------------- Test createDeals -------------------
+
+    @Test
+    void testCreateDeals_savesAllDeals() {
+        when(dealRepository.count()).thenReturn(0L);
+
+        dataInitializer.createDeals();
+
+        // Verify that saveAll is called
+        ArgumentCaptor<List<Deal>> captor = ArgumentCaptor.forClass(List.class);
+        verify(dealRepository, times(1)).saveAll(captor.capture());
+
+        List<Deal> deals = captor.getValue();
+        assertEquals(7, deals.size());
+
+        // Check first deal's fields
+        Deal firstDeal = deals.get(0);
+        assertEquals("Acme Corporation", firstDeal.getClientName());
+        assertEquals(DealType.M_A, firstDeal.getDealType());
+        assertEquals(DealStage.PROSPECT, firstDeal.getCurrentStage());
+        assertEquals(admin, firstDeal.getCreatedBy());
+        assertEquals(john, firstDeal.getAssignedTo());
+    }
+
+    // ------------------- Test run() -------------------
+
+    @Test
+    void testRun_createsUsersAndDeals() throws Exception {
+        when(userRepository.existsByUsername(anyString())).thenReturn(false);
+        when(dealRepository.count()).thenReturn(0L);
+
+        dataInitializer.run();
+
+        // Verify users saved
+        verify(userRepository, atLeast(5)).save(any(User.class));
+
+        // Verify deals saved
+        verify(dealRepository, times(1)).saveAll(anyList());
+
+        // Notes added to at least first 2 deals
+        verify(dealRepository, atLeast(2)).save(any(Deal.class));
+    }
+}

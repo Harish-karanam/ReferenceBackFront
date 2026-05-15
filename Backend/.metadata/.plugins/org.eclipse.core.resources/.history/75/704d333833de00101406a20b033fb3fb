@@ -1,0 +1,78 @@
+package com.example.demo;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.ResponseEntity;
+
+import com.example.demo.Enums.DealStage;
+import com.example.demo.controller.DealController;
+import com.example.demo.dto.CreateDealDTO;
+import com.example.demo.dto.DealDTO;
+import com.example.demo.service.DealService;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
+
+
+@ExtendWith(MockitoExtension.class)
+class DealControllerTest {
+
+    @Mock
+    private DealService dealService;
+
+    @InjectMocks
+    private DealController dealController;
+
+    @Test
+    void createDeal_success() {
+        CreateDealDTO dto = new CreateDealDTO();
+        DealDTO dealDTO = new DealDTO();
+
+        when(dealService.createDeal(dto)).thenReturn(dealDTO);
+
+        ResponseEntity<DealDTO> response =
+                dealController.createDeal(dto);
+
+        assertEquals(200, response.getStatusCodeValue());
+        assertEquals(dealDTO, response.getBody());
+    }
+
+    @Test
+    void getDealById_success() {
+        DealDTO dealDTO = new DealDTO();
+        when(dealService.getDealById(1L)).thenReturn(dealDTO);
+
+        ResponseEntity<DealDTO> response =
+                dealController.getDealById(1L);
+
+        assertEquals(200, response.getStatusCodeValue());
+        assertEquals(dealDTO, response.getBody());
+    }
+
+    @Test
+    void updateDealStage_success() {
+        DealDTO dealDTO = new DealDTO();
+        when(dealService.updateDealStage(1L, DealStage.OPEN))
+                .thenReturn(dealDTO);
+
+        ResponseEntity<DealDTO> response =
+                dealController.updateDealStage(1L, DealStage.OPEN);
+
+        assertEquals(200, response.getStatusCodeValue());
+        assertEquals(dealDTO, response.getBody());
+    }
+
+    @Test
+    void deleteDeal_success() {
+        ResponseEntity<Void> response =
+                dealController.deleteDeal(1L);
+
+        assertEquals(204, response.getStatusCodeValue());
+        verify(dealService).deleteDeal(1L);
+    }
+}

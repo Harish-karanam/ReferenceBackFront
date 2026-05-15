@@ -1,0 +1,132 @@
+package com.example.demo;
+
+
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+
+import com.example.demo.exceptions.GlobalExceptionHandler;
+import com.example.demo.exceptions.ResourceNotFoundException;
+import com.example.demo.exceptions.UnauthorizedException;
+import com.example.demo.exceptions.ValidationException;
+
+import org.springframework.validation.BindingResult;
+import org.springframework.validation.FieldError;
+
+import java.time.LocalDateTime;
+import java.util.Collections;
+import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
+class GlobalExceptionHandlerTest {
+
+    private GlobalExceptionHandler handler;
+
+    @BeforeEach
+    void setUp() {
+        handler = new GlobalExceptionHandler();
+    }
+
+    @Test
+    void testHandleResourceNotFound() {
+        ResourceNotFoundException ex = new ResourceNotFoundException("Not found");
+        ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = handler.handleResourceNotFound(ex);
+
+        assertEquals(404, response.getBody().getStatus());
+        assertEquals("Not found", response.getBody().getMessage());
+        assertNotNull(response.getBody().getTimestamp());
+    }
+
+    @Test
+    void testHandleUnauthorized() {
+        UnauthorizedException ex = new UnauthorizedException("Unauthorized");
+        ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = handler.handleUnauthorized(ex);
+
+        assertEquals(401, response.getBody().getStatus());
+        assertEquals("Unauthorized", response.getBody().getMessage());
+        assertNotNull(response.getBody().getTimestamp());
+    }
+
+    @Test
+    void testHandleValidation() {
+        ValidationException ex = new ValidationException("Invalid input");
+        ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = handler.handleValidation(ex);
+
+        assertEquals(400, response.getBody().getStatus());
+        assertEquals("Invalid input", response.getBody().getMessage());
+        assertNotNull(response.getBody().getTimestamp());
+    }
+
+    @Test
+    void testHandleIllegalArgument() {
+        IllegalArgumentException ex = new IllegalArgumentException("Illegal arg");
+        ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = handler.handleIllegalArgument(ex);
+
+        assertEquals(400, response.getBody().getStatus());
+        assertEquals("Illegal arg", response.getBody().getMessage());
+        assertNotNull(response.getBody().getTimestamp());
+    }
+
+    @Test
+    void testHandleBadCredentials() {
+        BadCredentialsException ex = new BadCredentialsException("Bad creds");
+        ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = handler.handleBadCredentials(ex);
+
+        assertEquals(401, response.getBody().getStatus());
+        assertEquals("Invalid username or password", response.getBody().getMessage());
+        assertNotNull(response.getBody().getTimestamp());
+    }
+
+    @Test
+    void testHandleAccessDenied() {
+        AccessDeniedException ex = new AccessDeniedException("Access denied");
+        ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = handler.handleAccessDenied(ex);
+
+        assertEquals(403, response.getBody().getStatus());
+        assertEquals("Access denied", response.getBody().getMessage());
+        assertNotNull(response.getBody().getTimestamp());
+    }
+
+    @Test
+    void testHandleValidationExceptions() {
+        MethodArgumentNotValidException ex = mock(MethodArgumentNotValidException.class);
+        BindingResult bindingResult = mock(BindingResult.class);
+        FieldError fieldError = new FieldError("object", "field", "must not be empty");
+
+        when(ex.getBindingResult()).thenReturn(bindingResult);
+        when(bindingResult.getFieldErrors()).thenReturn(Collections.singletonList(fieldError));
+
+        ResponseEntity<Map<String, String>> response = handler.handleValidationExceptions(ex);
+
+        assertEquals(400, response.getStatusCodeValue());
+        assertEquals("must not be empty", response.getBody().get("field"));
+    }
+
+    @Test
+    void testHandleGeneralException() {
+        Exception ex = new Exception("Something went wrong");
+        ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = handler.handleGeneralException(ex);
+
+        assertEquals(500, response.getBody().getStatus());
+        assertTrue(response.getBody().getMessage().contains("Something went wrong"));
+        assertNotNull(response.getBody().getTimestamp());
+    }
+
+    // Optional: Test your custom exception classes directly
+    @Test
+    void testCustomExceptions() {
+        ResourceNotFoundException rnfe = new ResourceNotFoundException("Not found");
+        UnauthorizedException ue = new UnauthorizedException("Unauthorized");
+        ValidationException ve = new ValidationException("Invalid");
+
+        assertEquals("Not found", rnfe.getMessage());
+        assertEquals("Unauthorized", ue.getMessage());
+        assertEquals("Invalid", ve.getMessage());
+    }
+}

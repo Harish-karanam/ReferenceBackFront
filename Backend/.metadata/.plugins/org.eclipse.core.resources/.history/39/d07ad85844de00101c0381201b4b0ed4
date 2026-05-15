@@ -1,0 +1,100 @@
+package com.example.demo;
+
+
+
+import com.example.demo.Enums.DealStage;
+import com.example.demo.Enums.DealType;
+import com.example.demo.Enums.Role;
+import com.example.demo.SecurityConfigurations.DataInitializer;
+import com.example.demo.entity.Deal;
+import com.example.demo.entity.Note;
+import com.example.demo.entity.User;
+import com.example.demo.repository.DealRepository;
+import com.example.demo.repository.UserRepository;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+import org.springframework.security.crypto.password.PasswordEncoder;
+
+import java.time.LocalDateTime;
+import java.util.Optional;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
+class DataInitializerTest {
+
+    @Mock
+    private UserRepository userRepository;
+
+    @Mock
+    private DealRepository dealRepository;
+
+    @Mock
+    private PasswordEncoder passwordEncoder;
+
+    @InjectMocks
+    private DataInitializer dataInitializer;
+
+    @BeforeEach
+    void setUp() {
+        MockitoAnnotations.openMocks(this);
+    }
+
+    @Test
+    void testRun_createsUsersAndDeals() throws Exception {
+        when(userRepository.existsByUsername(anyString())).thenReturn(false);
+        when(dealRepository.count()).thenReturn(0L);
+
+        User admin = new User();
+        admin.setUsername("admin");
+
+        User john = new User();
+        john.setUsername("john.doe");
+
+        User jane = new User();
+        jane.setUsername("jane.smith");
+
+        User bob = new User();
+        bob.setUsername("bob.wilson");
+
+        when(userRepository.findByUsername("admin")).thenReturn(Optional.of(admin));
+        when(userRepository.findByUsername("john.doe")).thenReturn(Optional.of(john));
+        when(userRepository.findByUsername("jane.smith")).thenReturn(Optional.of(jane));
+        when(userRepository.findByUsername("bob.wilson")).thenReturn(Optional.of(bob));
+
+        when(passwordEncoder.encode(anyString())).thenReturn("encoded");
+
+        dataInitializer.run();
+
+        // Verify users are saved
+        verify(userRepository, atLeast(1)).save(any(User.class));
+
+        // Verify deals are saved
+        verify(dealRepository, atLeast(1)).saveAll(anyList());
+    }
+
+    @Test
+    void testAddSampleNotes_addsNotesToDeal() throws Exception {
+        User user1 = new User();
+        user1.setUsername("user1");
+        User user2 = new User();
+        user2.setUsername("user2");
+
+        Deal deal = new Deal();
+
+        dataInitializer.run(); // To initialize if needed
+
+        // Using reflection to call private method
+        java.lang.reflect.Method method = DataInitializer.class.getDeclaredMethod("addSampleNotes", Deal.class, User[].class);
+        method.setAccessible(true);
+        method.invoke(dataInitializer, deal, new User[]{user1, user2});
+
+        assertNotNull(deal.getNotes());
+        assertEquals(3, deal.getNotes().size());
+        assertEquals("Initial contact made with client. Positive response received.", deal.getNotes().get(0).getNote());
+    }
+}

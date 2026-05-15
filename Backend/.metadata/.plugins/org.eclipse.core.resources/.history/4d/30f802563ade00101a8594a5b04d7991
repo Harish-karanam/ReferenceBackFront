@@ -1,0 +1,76 @@
+package com.example.demo;
+
+
+import com.example.demo.Enums.DealStage;
+import com.example.demo.dto.CreateDealDTO;
+import com.example.demo.dto.DealDTO;
+import com.example.demo.entity.Deal;
+import com.example.demo.entity.User;
+import com.example.demo.repository.DealRepository;
+import com.example.demo.repository.UserRepository;
+import com.example.demo.service.DealService;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.*;
+
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.Authentication;
+
+import java.util.Optional;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
+class DealServiceTest {
+
+    @Mock
+    private DealRepository dealRepository;
+
+    @Mock
+    private UserRepository userRepository;
+
+    @InjectMocks
+    private DealService dealService;
+
+    @BeforeEach
+    void setUp() {
+        MockitoAnnotations.openMocks(this);
+    }
+
+    @Test
+    void createDeal_ShouldReturnDealDTO() {
+        CreateDealDTO dto = new CreateDealDTO();
+        dto.setClientName("Client A");
+        dto.setDealType("Type1");
+        dto.setSector("IT");
+        dto.setSummary("Summary");
+        dto.setAssignedToId(2L);
+        dto.setCurrentStage(DealStage.NEW);
+
+        User currentUser = new User();
+        currentUser.setUsername("user1");
+
+        User assignedUser = new User();
+        assignedUser.setId(2L);
+
+        Authentication auth = mock(Authentication.class);
+        when(auth.getName()).thenReturn("user1");
+        SecurityContext securityContext = mock(SecurityContext.class);
+        when(securityContext.getAuthentication()).thenReturn(auth);
+        SecurityContextHolder.setContext(securityContext);
+
+        when(userRepository.findByUsername("user1")).thenReturn(Optional.of(currentUser));
+        when(userRepository.findById(2L)).thenReturn(Optional.of(assignedUser));
+
+        Deal savedDeal = new Deal();
+        savedDeal.setClientName("Client A");
+        when(dealRepository.save(any(Deal.class))).thenReturn(savedDeal);
+
+        DealDTO dealDTO = dealService.createDeal(dto);
+
+        assertNotNull(dealDTO);
+        assertEquals("Client A", dealDTO.getClientName());
+    }
+}
